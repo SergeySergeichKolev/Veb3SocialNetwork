@@ -1,0 +1,116 @@
+import "./Chat.css";
+import { supabase } from "./supabase";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+
+// стейт - хранилище.
+
+// НЕ РАБОТАЕТ REALTIME
+
+export default function Chat() {
+  const { userId } = useParams(); //id собеседника из URL
+  const [messages, setMessages] = useState([]); //история сообщений
+  const [msg, setMsg] = useState(""); //текущее сообщение
+  const [user, setUser] = useState(null); //Я мой аккаунт
+
+  // подгрузка нашего id
+  useEffect(() => {
+    async function loadData() {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    }
+
+    loadData();
+  }, []);
+
+  // подгрузка данных собеседника
+
+  useEffect(() => {
+    if (!user || !userId) return;
+
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from("msg")
+        .select("*")
+        .or(
+          `sender.eq.${user.id},getter.eq.${userId}`,
+          `sender.eq.${userId},getter.eq.${user.id}`,
+        )
+        .order("created_at", { ascending: true }); //фильтр по дате создания
+      if (!error) setMessages(data);
+    };
+
+    fetchMessages();
+
+    console.log(user.id);
+    console.log(userId);
+    console.log(messages);
+
+    const subscription = supabase
+      .channel(`chat:${user.id}:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "msg",
+        },
+        (payload) => {
+          const newMessage = payload.new;
+          // Проверяем, относится ли сообщение к текущему диалогу
+          const isRelevant =
+            (newMessage.sender === user.id && newMessage.getter === userId) ||
+            (newMessage.sender === userId && newMessage.getter === user.id);
+
+          if (isRelevant) {
+            setMessages((prev) => [...prev, newMessage]);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user, userId]); //подгрузка сообщений происходит.
+
+  //когда меняется id ваш или вашего собеседника
+
+  //когда нажимаю кнопку отправить
+  async function sendMessage() {
+    await supabase.from("msg").insert({
+      text: msg,
+      sender: user.id,
+      getter: userId,
+    });
+  }
+
+  return (
+    <div className="chat">
+      <h3 className="chat-name">{userId}</h3>
+
+      <div className="messages-container">
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={`message ${m.sender === user?.id ? "my-message" : "their-message"}`}
+          >
+            <div className="message-bubble">{m.text}</div>
+            <div className="message-time"></div>
+          </div>
+        ))}
+      </div>
+
+      <div className="chat-submit">
+        <input
+          onChange={(event) => setMsg(event.target.value)}
+          className="chat-input"
+          value={msg}
+        />
+        <button onClick={sendMessage} className="chat-btn">
+          Отправить
+        </button>
+      </div>
+    </div>
+  );
+}
