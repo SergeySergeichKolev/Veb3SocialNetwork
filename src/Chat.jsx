@@ -33,7 +33,8 @@ export default function Chat() {
         .from("msg")
         .select("*")
         .or(
-          `and(sender.eq.${user.id},getter.eq.${userId}),and(sender.eq.${userId},getter.eq.${user.id})`,
+          `sender.eq.${user.id},getter.eq.${userId}`,
+          `sender.eq.${userId},getter.eq.${user.id}`,
         )
         .order("created_at", { ascending: true }); //фильтр по дате создания
       if (!error) setMessages(data);
@@ -41,8 +42,12 @@ export default function Chat() {
 
     fetchMessages();
 
+    console.log(user.id);
+    console.log(userId);
+    console.log(messages);
+
     const subscription = supabase
-      .channel("public:msg")
+      .channel(`chat:${user.id}:${userId}`)
       .on(
         "postgres_changes",
         {
