@@ -41,10 +41,6 @@ export default function Chat() {
 
     fetchMessages();
 
-    console.log(user.id);
-    console.log(userId);
-    console.log(messages);
-
     const subscription = supabase
       .channel(`chat:${user.id}:${userId}`)
       .on(
@@ -57,15 +53,10 @@ export default function Chat() {
         },
         (payload) => {
           const newMessage = payload.new;
-          console.log("📨 Realtime event received:", newMessage);
 
           const isRelevant =
             (newMessage.sender === user.id && newMessage.getter === userId) ||
             (newMessage.sender === userId && newMessage.getter === user.id);
-
-          console.log("👤 Current user.id:", user.id);
-          console.log("👥 URL userId:", userId);
-          console.log("✅ isRelevant:", isRelevant);
 
           if (isRelevant) {
             setMessages((prev) => [...prev, newMessage]);
