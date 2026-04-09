@@ -57,10 +57,15 @@ export default function Chat() {
         },
         (payload) => {
           const newMessage = payload.new;
-          // Проверяем, относится ли сообщение к текущему диалогу
+          console.log("📨 Realtime event received:", newMessage);
+
           const isRelevant =
             (newMessage.sender === user.id && newMessage.getter === userId) ||
             (newMessage.sender === userId && newMessage.getter === user.id);
+
+          console.log("👤 Current user.id:", user.id);
+          console.log("👥 URL userId:", userId);
+          console.log("✅ isRelevant:", isRelevant);
 
           if (isRelevant) {
             setMessages((prev) => [...prev, newMessage]);
