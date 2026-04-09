@@ -33,8 +33,7 @@ export default function Chat() {
         .from("msg")
         .select("*")
         .or(
-          `sender.eq.${user.id},getter.eq.${userId}`,
-          `sender.eq.${userId},getter.eq.${user.id}`,
+          `and(sender.eq.${user.id},getter.eq.${userId}),and(sender.eq.${userId},getter.eq.${user.id})`,
         )
         .order("created_at", { ascending: true }); //фильтр по дате создания
       if (!error) setMessages(data);
@@ -54,6 +53,7 @@ export default function Chat() {
           event: "INSERT",
           schema: "public",
           table: "msg",
+          //filter: `getter=eq.${user.id}`,
         },
         (payload) => {
           const newMessage = payload.new;
